@@ -2,6 +2,7 @@ curl -X POST http://localhost:8080/register -H "Content-Type: application/json" 
 curl -X POST http://localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"user2\",\"password\":\"password123\",\"role\":\"user\"}"
 curl -X POST http://localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\",\"role\":\"admin\"}"
 
+
 2. Login to Get Token
 curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\"}"
 curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"user1\",\"password\":\"password123\"}"

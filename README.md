@@ -34,6 +34,7 @@ This project implements a secure and functional bank API that supports user auth
 1. **Access Logs**:
    - Implemented request and response logging in a structured JSON format.
    - Logs include request headers, query parameters, request body length, response body length, and HTTP status class.
+   - improtant note about the logging. in deposit and withdraw cases i didnt add the user_id because it is not in the "qs_params": "<REQUEST_QUERY_STRING_PARAMS>" but in the request body payload.
 
 2. **Error Logging**:
    - Added centralized error handling to ensure all application errors are logged uniformly with context for easier debugging.

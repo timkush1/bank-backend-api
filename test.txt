@@ -1,0 +1,23 @@
+curl -X POST http://localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"user1\",\"password\":\"password123\",\"role\":\"user\"}"
+curl -X POST http://localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"user2\",\"password\":\"password123\",\"role\":\"user\"}"
+curl -X POST http://localhost:8080/register -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\",\"role\":\"admin\"}"
+
+2. Login to Get Token
+curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"admin\",\"password\":\"admin123\"}"
+curl -X POST http://localhost:8080/login -H "Content-Type: application/json" -d "{\"username\":\"user1\",\"password\":\"password123\"}"
+
+3.1 Create an Account
+curl -X POST http://localhost:8080/accounts -H "Authorization: Bearer " -H "Content-Type: application/json" -d "{\"type\":\"checking\",\"balance\":500.00,\"userID\":1}"
+
+3.2 get an AccountList
+curl -X GET http://localhost:8080/accounts -H "Authorization: Bearer " -H "Content-Type: application/json"
+
+
+4. Test getBalance
+curl -X GET "http://localhost:8080/balance?user_id=1" -H "Content-Type: application/json" -H "Authorization: Bearer "
+
+5. Deposit balance into the account:
+curl -X POST http://localhost:8080/balance -H "Authorization: Bearer " -H "Content-Type: application/json" -d "{\"user_id\":1,\"amount\":50.00}"
+
+6. Withdraw balance from the account:
+curl -X DELETE http://localhost:8080/balance -H "Authorization: Bearer " -H "Content-Type: application/json" -d "{\"user_id\":1,\"amount\":30.00}"

@@ -1,116 +1,76 @@
-# README
+# Bank Backend API
 
-## Overview
+A bank REST API in Go with JWT authentication, role-based access control (user / admin), and structured JSON access logging. It started from an insecure baseline, which I hardened.
 
-This project implements a secure and functional bank API that supports user authentication, role-based access control, and account management. The following changes and enhancements were made to improve the security, functionality, and logging capabilities of the application.
+## Features
 
----
+- **Authentication**: register and log in. Passwords are hashed with **bcrypt**, and JWTs are signed with HS256 and expire.
+- **Role-based access control**: admins manage accounts. Users can only read or change their own balance, and admins can read any balance.
+- **Input validation**: duplicate usernames are rejected, and withdrawals check the balance first.
+- **Access logging**: every request and response is written to `access.log` as one JSON line (URL, query params, headers, body sizes and status class). Request bodies are never logged, so passwords stay out of the logs. These logs are the input for [Bola-detector](https://github.com/timkush1/Bola-detector).
 
-## Security Fixes
+## Security improvements over the baseline
 
-1. **Password Hashing**:
-   - Previously, passwords were stored in plain text, which is insecure.
-   - Now, passwords are hashed using the `bcrypt` algorithm before being stored to ensure secure storage of user credentials.
+| Issue | Fix |
+|-------|-----|
+| Passwords stored in plain text | Hashed with bcrypt |
+| Duplicate usernames allowed | Rejected at `/register` |
+| Tokens never expired | JWTs carry an expiry |
+| No authorization checks | `Auth` and `RoleMiddleware` middleware check the token and role on protected routes |
 
-2. **Duplicate Username Check**:
-   - Added validation to prevent registering duplicate usernames during the `/register` process.
+## Tech stack
 
-3. **JWT Token Expiry**:
-   - Added an expiration time to the JWT tokens to prevent the misuse of stale or long-lived tokens.
+Go (`net/http`) · `golang-jwt` (dgrijalva/jwt-go) · `golang.org/x/crypto/bcrypt` · OpenAPI 3 spec (`openapi.yaml`)
 
-4. **Sensitive Data Masking in Logs**:
-   - Modified the logging mechanism to mask sensitive information like plain-text passwords and JWT tokens in both requests and responses.
+## Project structure
 
-5. **Authorization Validation**:
-   - Added middleware to validate user roles and permissions before accessing protected API endpoints, ensuring proper role-based access control.
+```
+main.go        Server setup and routing
+pkg/api.go     Handlers: register, login, accounts, balance
+pkg/utils.go   Auth/role middleware and access logging
+pkg/models.go  Data models (in-memory storage)
+openapi.yaml   API specification
+```
 
-6. **Rate Limiting**:
-   - Implemented rate limiting to mitigate brute-force attacks and abuse of the API.
+## Getting started
 
----
+```bash
+export JWT_SECRET=$(openssl rand -hex 32)   # required
+go run .                                    # listens on :8080
+```
 
-## Logging Enhancements
+Data is kept in memory, so it resets when the server restarts.
 
-1. **Access Logs**:
-   - Implemented request and response logging in a structured JSON format.
-   - Logs include request headers, query parameters, request body length, response body length, and HTTP status class.
-   - improtant note about the logging. in deposit and withdraw cases i didnt add the user_id because it is not in the "qs_params": "<REQUEST_QUERY_STRING_PARAMS>" but in the request body payload.
+## API
 
-2. **Error Logging**:
-   - Added centralized error handling to ensure all application errors are logged uniformly with context for easier debugging.
+| Method | Endpoint | Access | Description |
+|--------|----------|--------|-------------|
+| POST | `/register` | Public | Create a user (`username`, `password`, `role`) |
+| POST | `/login` | Public | Returns a JWT |
+| POST | `/accounts` | Admin | Create an account for a user |
+| GET | `/accounts` | Admin | List all accounts |
+| GET | `/balance?user_id=<id>` | Owner or admin | Get a balance |
+| POST | `/balance` | Owner | Deposit (`user_id`, `amount`) |
+| DELETE | `/balance` | Owner | Withdraw (`user_id`, `amount`) |
 
----
+Send `Authorization: Bearer <token>` on every protected route. The full spec is in [`openapi.yaml`](openapi.yaml).
 
-## Functional Enhancements
+### Example
 
-1. **Implemented Main Function**:
-   - Developed the `main` function to set up the API server using the `http` package to handle requests and route them to appropriate handlers.
+```bash
+H='Content-Type: application/json'
 
-2. **Added Middleware**:
-   - Middleware for:
-     - Request validation.
-     - Role-based access control.
-     - Logging all incoming requests and outgoing responses.
+curl -X POST localhost:8080/register -H "$H" -d '{"username":"admin","password":"admin123","role":"admin"}'
+curl -X POST localhost:8080/register -H "$H" -d '{"username":"user1","password":"password123","role":"user"}'
 
-3. **Improved Token Generation**:
-   - Enhanced the JWT generation mechanism to include expiration time and ensure tokens are invalidated when no longer needed.
+ADMIN=$(curl -s -X POST localhost:8080/login -H "$H" -d '{"username":"admin","password":"admin123"}' | jq -r .token)
+USER=$(curl -s -X POST localhost:8080/login -H "$H" -d '{"username":"user1","password":"password123"}' | jq -r .token)
 
+# Admin creates an account for user 2 (user1)
+curl -X POST localhost:8080/accounts -H "Authorization: Bearer $ADMIN" -H "$H" -d '{"type":"checking","balance":500,"userID":2}'
 
-## Instructions Followed
-
-- **Security Improvements**:
-  - Identified and fixed issues in the API, such as plain-text password storage and missing duplicate username checks.
-  - Added middleware for access control and secure logging.
-
-- **Logging**:
-  - Implemented request and response logging in the required JSON format.
-
-- **API Server**:
-  - Developed the main function to serve the API using the `http` package.
-
-## Permissions for API Endpoints
-
-### /register
-- **Permissions**: Public access.
-- **Description**: Allows new users to register with a username and password. Duplicate username checks and password hashing are applied.
-
----
-
-### /login
-- **Permissions**: Public access.
-- **Description**: Generates a JWT token upon successful authentication with a valid username and password.
-
----
-
-### /balance
-- **Permissions**: User-only access his own and admin can acccess for everyone.
-- **Description**: Allows authenticated users to retrieve their account balance.
-
----
-
-### /deposit
-- **Permissions**: User-only access.
-- **Description**: Enables users to deposit funds into their account.
-
----
-
-### /withdraw
-- **Permissions**: User-only access.
-- **Description**: Allows users to withdraw funds from their account, with proper balance validation.
-
----
-
-### /accounts
-- **Permissions**: Admin-only access.
-- **Description**: Grants admins the ability to list all user accounts.
-
----
-
-### /create-account
-- **Permissions**: Admin-only access.
-- **Description**: Enables admins to create new accounts for users.
-
-
-
-## Bonus:
-- In test.txt, there are all the command prompts to test the API using curl. 
+# user1 checks, deposits and withdraws
+curl "localhost:8080/balance?user_id=2" -H "Authorization: Bearer $USER"
+curl -X POST   localhost:8080/balance -H "Authorization: Bearer $USER" -H "$H" -d '{"user_id":2,"amount":50}'
+curl -X DELETE localhost:8080/balance -H "Authorization: Bearer $USER" -H "$H" -d '{"user_id":2,"amount":30}'
+```

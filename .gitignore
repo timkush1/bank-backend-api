@@ -1,0 +1,5 @@
+# Runtime logs
+access.log
+
+# Build output
+/bank-backend-api

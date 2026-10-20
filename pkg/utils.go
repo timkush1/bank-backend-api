@@ -1,44 +1,41 @@
 package pkg
 
-
 import (
-    "encoding/json"
-    "errors"
-    "fmt"
-    "log"
-    "net/http"
-    "os"
-    "strings"
-    "time"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"strings"
+	"time"
 
-    "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 )
 
 func Auth(next func(http.ResponseWriter, *http.Request, *Claims)) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        startTime := time.Now()
+	return func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
 
-        // Wrap the ResponseWriter
-        lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		// Wrap the ResponseWriter
+		lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
-        // Validate token and extract claims
-        claims, err := validateToken(r)
-        if err != nil {
-            lrw.WriteHeader(http.StatusUnauthorized)
-            logRequestResponse(r, lrw, startTime)
-            http.Error(lrw, "Unauthorized", http.StatusUnauthorized)
-            return
-        }
+		// Validate token and extract claims
+		claims, err := validateToken(r)
+		if err != nil {
+			lrw.WriteHeader(http.StatusUnauthorized)
+			logRequestResponse(r, lrw, startTime)
+			http.Error(lrw, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
-        log.Printf("Authenticated user: %s with role: %s", claims.Username, claims.Role)
+		log.Printf("Authenticated user: %s with role: %s", claims.Username, claims.Role)
 
-        next(lrw, r, claims)
+		next(lrw, r, claims)
 
-        logRequestResponse(r, lrw, startTime)
-    }
+		logRequestResponse(r, lrw, startTime)
+	}
 }
-
-
 
 func validateToken(r *http.Request) (*Claims, error) {
 	authHeader := r.Header.Get("Authorization")
@@ -62,49 +59,47 @@ func validateToken(r *http.Request) (*Claims, error) {
 }
 
 func RoleMiddleware(requiredRole string, next func(http.ResponseWriter, *http.Request, *Claims)) http.HandlerFunc {
-    return func(w http.ResponseWriter, r *http.Request) {
-        startTime := time.Now()
+	return func(w http.ResponseWriter, r *http.Request) {
+		startTime := time.Now()
 
-        // Wrap the ResponseWriter
-        lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+		// Wrap the ResponseWriter
+		lrw := &loggingResponseWriter{ResponseWriter: w, statusCode: http.StatusOK}
 
-        // Validate token and extract claims
-        claims, err := validateToken(r)
-        if err != nil {
-            lrw.WriteHeader(http.StatusUnauthorized)
-            logRequestResponse(r, lrw, startTime)
-            http.Error(lrw, "Unauthorized", http.StatusUnauthorized)
-            return
-        }
+		// Validate token and extract claims
+		claims, err := validateToken(r)
+		if err != nil {
+			lrw.WriteHeader(http.StatusUnauthorized)
+			logRequestResponse(r, lrw, startTime)
+			http.Error(lrw, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
 
-        // Check if the user's role matches the required role
-        if claims.Role != requiredRole {
-            lrw.WriteHeader(http.StatusForbidden)
-            logRequestResponse(r, lrw, startTime)
-            http.Error(lrw, "Forbidden", http.StatusForbidden)
-            return
-        }
+		// Check if the user's role matches the required role
+		if claims.Role != requiredRole {
+			lrw.WriteHeader(http.StatusForbidden)
+			logRequestResponse(r, lrw, startTime)
+			http.Error(lrw, "Forbidden", http.StatusForbidden)
+			return
+		}
 
-        log.Printf("User %s passed role validation: required role %s", claims.Username, requiredRole)
+		log.Printf("User %s passed role validation: required role %s", claims.Username, requiredRole)
 
-        next(lrw, r, claims)
+		next(lrw, r, claims)
 
-        logRequestResponse(r, lrw, startTime)
-    }
+		logRequestResponse(r, lrw, startTime)
+	}
 }
 
-
-
 type RequestLog struct {
-	URL         string              `json:"url"`
-	QSParams    map[string][]string `json:"qs_params"`
-	Headers     http.Header         `json:"headers"`
-	ReqBodyLen  int64               `json:"req_body_len"`
+	URL        string              `json:"url"`
+	QSParams   map[string][]string `json:"qs_params"`
+	Headers    http.Header         `json:"headers"`
+	ReqBodyLen int64               `json:"req_body_len"`
 }
 
 type ResponseLog struct {
-	StatusClass  string `json:"status_class"`
-	RspBodyLen   int `json:"rsp_body_len"`
+	StatusClass string `json:"status_class"`
+	RspBodyLen  int    `json:"rsp_body_len"`
 }
 
 type LogData struct {
@@ -136,7 +131,6 @@ func logRequestResponse(r *http.Request, lrw *loggingResponseWriter, startTime t
 		log.Fatalf("Failed to open log file: %v", err)
 	}
 	defer logFile.Close()
-	
 
 	// Prepare the log data
 	logData := LogData{

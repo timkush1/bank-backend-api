@@ -1,16 +1,15 @@
-// package api_sec
 package pkg
 
 import (
-    "encoding/json"
-    "log"
-    "net/http"
-    "os"
-    "strconv"
-    "time"
+	"encoding/json"
+	"log"
+	"net/http"
+	"os"
+	"strconv"
+	"time"
 
-    "github.com/dgrijalva/jwt-go"
-    "golang.org/x/crypto/bcrypt"
+	"github.com/dgrijalva/jwt-go"
+	"golang.org/x/crypto/bcrypt"
 )
 
 var jwtKey = []byte(os.Getenv("JWT_SECRET"))
@@ -21,101 +20,98 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
-
 // Add this helper function
 func HashPassword(password string) (string, error) {
-    hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-    return string(hashedPassword), err
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hashedPassword), err
 }
 
 // Update Register handler
 func Register(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-        return
-    }
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
 
-    var user User
-    err := json.NewDecoder(r.Body).Decode(&user)
-    if err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
-    }
+	var user User
+	err := json.NewDecoder(r.Body).Decode(&user)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-    // Hash the user's password
-    hashedPassword, err := HashPassword(user.Password)
-    if err != nil {
-        http.Error(w, "Internal server error", http.StatusInternalServerError)
-        return
-    }
-    user.Password = hashedPassword
+	// Hash the user's password
+	hashedPassword, err := HashPassword(user.Password)
+	if err != nil {
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	user.Password = hashedPassword
 
-    // Check for duplicate usernames
-    for _, u := range users {
-        if u.Username == user.Username {
-            http.Error(w, "Username already exists", http.StatusConflict)
-            return
-        }
-    }
+	// Check for duplicate usernames
+	for _, u := range users {
+		if u.Username == user.Username {
+			http.Error(w, "Username already exists", http.StatusConflict)
+			return
+		}
+	}
 
-    user.ID = len(users) + 1
+	user.ID = len(users) + 1
 
-    users = append(users, user)
+	users = append(users, user)
 	log.Printf("Users slice: %+v", users)
-    json.NewEncoder(w).Encode(user)
+	json.NewEncoder(w).Encode(user)
 }
-
 
 // Add this helper function
 func CheckPassword(hashedPassword, password string) error {
-    return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
-
 
 // Update Login handler
 func Login(w http.ResponseWriter, r *http.Request) {
-    if r.Method != http.MethodPost {
-        http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
-        return
-    }
+	if r.Method != http.MethodPost {
+		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
+		return
+	}
 
-    var credentials User
-    err := json.NewDecoder(r.Body).Decode(&credentials)
-    if err != nil {
-        http.Error(w, "Invalid request body", http.StatusBadRequest)
-        return
-    }
+	var credentials User
+	err := json.NewDecoder(r.Body).Decode(&credentials)
+	if err != nil {
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		return
+	}
 
-    for _, u := range users {
-        if u.Username == credentials.Username {
-            err := CheckPassword(u.Password, credentials.Password)
-            if err != nil {
-                http.Error(w, "Invalid credentials", http.StatusUnauthorized)
-                return
-            }
+	for _, u := range users {
+		if u.Username == credentials.Username {
+			err := CheckPassword(u.Password, credentials.Password)
+			if err != nil {
+				http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+				return
+			}
 
-            // Create a token if credentials are valid for 15 minutes
-            expirationTime := time.Now().Add(15 * time.Minute)
-            claims := &Claims{
-                Username: u.Username,
-                Role:     u.Role,
-                StandardClaims: jwt.StandardClaims{
-                    ExpiresAt: expirationTime.Unix(),
-                },
-            }
+			// Create a token if credentials are valid for 15 minutes
+			expirationTime := time.Now().Add(15 * time.Minute)
+			claims := &Claims{
+				Username: u.Username,
+				Role:     u.Role,
+				StandardClaims: jwt.StandardClaims{
+					ExpiresAt: expirationTime.Unix(),
+				},
+			}
 
-            token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-            tokenString, err := token.SignedString(jwtKey)
-            if err != nil {
-                http.Error(w, "Internal server error", http.StatusInternalServerError)
-                return
-            }
+			token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+			tokenString, err := token.SignedString(jwtKey)
+			if err != nil {
+				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
 
-            json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
-            return
-        }
-    }
-    http.Error(w, "Invalid credentials", http.StatusUnauthorized)
+			json.NewEncoder(w).Encode(map[string]string{"token": tokenString})
+			return
+		}
+	}
+	http.Error(w, "Invalid credentials", http.StatusUnauthorized)
 }
 
 func AccountsHandler(w http.ResponseWriter, r *http.Request, claims *Claims) {
@@ -138,7 +134,6 @@ func AccountsHandler(w http.ResponseWriter, r *http.Request, claims *Claims) {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
 }
-
 
 func createAccount(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	var acc Account
@@ -163,7 +158,7 @@ func createAccount(w http.ResponseWriter, r *http.Request, claims *Claims) {
 		http.Error(w, "User does not exist", http.StatusBadRequest)
 		return
 	}
-	
+
 	// Check if the user already has an account
 	for _, existingAcc := range accounts {
 		if existingAcc.UserID == acc.UserID {
@@ -171,7 +166,6 @@ func createAccount(w http.ResponseWriter, r *http.Request, claims *Claims) {
 			return
 		}
 	}
-
 
 	// Assign userID and create account
 	acc.ID = len(accounts) + 1
@@ -181,7 +175,6 @@ func createAccount(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	log.Printf("Account created: %+v", acc) // Debug log
 	json.NewEncoder(w).Encode(acc)
 }
-
 
 func listAccounts(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	json.NewEncoder(w).Encode(accounts)
@@ -199,7 +192,7 @@ func BalanceHandler(w http.ResponseWriter, r *http.Request, claims *Claims) {
 }
 
 func getBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
-	
+
 	//in the getBalance function,we let admins to get balance of every id, but users can only get their own balance!
 	// Extract user_id from the query parameter
 	userId := r.URL.Query().Get("user_id")
@@ -243,8 +236,6 @@ func getBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	http.Error(w, "Account not found", http.StatusNotFound)
 }
 
-
-
 func isUserAuthorized(claims *Claims, userID int) bool {
 	for _, user := range users {
 		if user.ID == userID && user.Username == claims.Username {
@@ -253,7 +244,6 @@ func isUserAuthorized(claims *Claims, userID int) bool {
 	}
 	return false
 }
-
 
 func depositBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	// in the depositBalance function, only users are able deposit to their own account!
@@ -288,8 +278,7 @@ func depositBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
 func withdrawBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
 	// in the withdrawBalance function, only users are able withdraw from their own account!
 	// we will restrict admins from withdrawing from any account! by checking for authorization for the exact user
-	
-	
+
 	var body struct {
 		UserID int     `json:"user_id"`
 		Amount float64 `json:"amount"`
@@ -319,7 +308,3 @@ func withdrawBalance(w http.ResponseWriter, r *http.Request, claims *Claims) {
 
 	http.Error(w, "Account not found", http.StatusNotFound)
 }
-
-
-
-

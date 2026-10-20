@@ -1,4 +1,4 @@
-package api_sec
+package pkg
 
 import (
 	"errors"
